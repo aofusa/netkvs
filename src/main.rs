@@ -15,14 +15,14 @@ fn handle_connection(mut stream: TcpStream, table: &Arc<RwLock<HashMap<String, V
         let msg_set = b"set";
         let msg_get = b"get";
 
-        if (buffer.starts_with(msg_quit)) {
+        if buffer.starts_with(msg_quit) {
             let response = "QUIT\r\n";
             stream.write(response.as_bytes())?;
             stream.flush()?;
             break;
-        } else if (buffer.starts_with(msg_set)) {
+        } else if buffer.starts_with(msg_set) {
             let row = String::from_utf8_lossy(&buffer[..]);
-            let mut data = row.split_whitespace().collect::<Vec<&str>>();
+            let data = row.split_whitespace().collect::<Vec<&str>>();
             let key = data[1];
             let value = data[2..].join(" ");
             table.write()?.insert(String::from(key), Vec::from(value.as_bytes()));
@@ -30,9 +30,9 @@ fn handle_connection(mut stream: TcpStream, table: &Arc<RwLock<HashMap<String, V
             let response = "STORED\r\n";
             stream.write(response.as_bytes())?;
             stream.flush()?;
-        } else if (buffer.starts_with(msg_get)) {
+        } else if buffer.starts_with(msg_get) {
             let row = String::from_utf8_lossy(&buffer[..]);
-            let mut data = row.split_whitespace().collect::<Vec<&str>>();
+            let data = row.split_whitespace().collect::<Vec<&str>>();
             let key = data[1];
             let t = table.read()?;
             let value = t.get(key);
