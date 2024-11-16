@@ -3,7 +3,6 @@ use std::collections::HashMap;
 use std::error::Error;
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
-use std::ptr::null;
 use std::rc::Rc;
 
 fn handle_connection(mut stream: TcpStream, mut table: &mut HashMap<String, Vec<u8>>) -> Result<(), Box<dyn Error>> {
