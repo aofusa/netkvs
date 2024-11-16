@@ -1,11 +1,11 @@
-use std::cell::RefCell;
 use std::collections::HashMap;
 use std::error::Error;
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
-use std::rc::Rc;
+use std::sync::{Arc, RwLock};
+use std::thread;
 
-fn handle_connection(mut stream: TcpStream, mut table: &mut HashMap<String, Vec<u8>>) -> Result<(), Box<dyn Error>> {
+fn handle_connection(mut stream: TcpStream, table: &Arc<RwLock<HashMap<String, Vec<u8>>>>) -> Result<(), Box<dyn Error + '_>> {
     loop {
         let mut buffer = [0; 1024];
         stream.read(&mut buffer)?;
@@ -25,7 +25,7 @@ fn handle_connection(mut stream: TcpStream, mut table: &mut HashMap<String, Vec<
             let mut data = row.split_whitespace().collect::<Vec<&str>>();
             let key = data[1];
             let value = data[2..].join(" ");
-            table.insert(String::from(key), Vec::from(value.as_bytes()));
+            table.write()?.insert(String::from(key), Vec::from(value.as_bytes()));
 
             let response = "STORED\r\n";
             stream.write(response.as_bytes())?;
@@ -34,7 +34,8 @@ fn handle_connection(mut stream: TcpStream, mut table: &mut HashMap<String, Vec<
             let row = String::from_utf8_lossy(&buffer[..]);
             let mut data = row.split_whitespace().collect::<Vec<&str>>();
             let key = data[1];
-            let value = table.get(key);
+            let t = table.read()?;
+            let value = t.get(key);
             let response = if value.is_some() {
                 value.ok_or("get value error")?
             } else {
@@ -54,14 +55,17 @@ fn main() -> Result<(), Box<dyn Error>> {
     let listener = TcpListener::bind(host)?;
     println!("Server listen on {}", host);
 
-    let table: Rc<RefCell<HashMap<String, Vec<u8>>>> =
-      Rc::new(RefCell::new(HashMap::new()));
+    let table: Arc<RwLock<HashMap<String, Vec<u8>>>> =
+      Arc::new(RwLock::new(HashMap::new()));
 
     for stream in listener.incoming() {
         let stream = stream?;
+        let t = table.clone();
 
         println!("Connection established!");
-        handle_connection(stream, &mut table.clone().borrow_mut())?;
+        thread::spawn(move || {
+            handle_connection(stream, &t).unwrap();
+        });
     }
 
     Ok(())
