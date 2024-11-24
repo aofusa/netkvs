@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::error::Error;
 use std::io::{Read, Write};
-use std::net::{TcpListener, TcpStream};
+use std::net::{Shutdown, TcpListener, TcpStream};
 use std::sync::{Arc, RwLock};
 use std::thread;
 
@@ -47,6 +47,7 @@ fn handle_connection(mut stream: TcpStream, table: &Arc<RwLock<HashMap<String, V
         }
     }
 
+    stream.shutdown(Shutdown::Both)?;
     Ok(())
 }
 
